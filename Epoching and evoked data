@@ -1,0 +1,24 @@
+import mne
+import scipy
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from scipy.integrate import simps
+
+
+# define path and filename (here you might want to loop over datasets!)
+filename = "sleep_sd1020_eyes_closed2_060219.vhdr"
+filepath = Path("/home/benjamin/Downloads/sd1020/")
+file = filepath / filename
+
+# 1. Generate an event file for pulses and annotations:
+events = mne.events_from_annotations(data)
+
+# 2. Epoch data using function (setting index 0 for events selects a list in the array obj. events):
+epochs = mne.Epochs(data, events[0], tmin=-0.2, tmax=.5, preload=True)
+epochs.plot()
+
+# 3. Create evoked data (averages for all the trials):
+Evoked = epochs.average()
+evoked.plot_joint() # plots butterfly plot
