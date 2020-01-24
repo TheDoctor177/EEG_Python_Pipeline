@@ -94,7 +94,6 @@ new_sampling = 1000
 data.resample(new_sampling, npad='auto')
 # plot_response(data, ['time', 'psd'])
 
-
 # 4. filter (first high- then low-pass; notch-filter?)
 l_cut, h_cut = 1, 80
 data.filter(l_freq=l_cut, h_freq=h_cut)
