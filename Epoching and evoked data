@@ -22,3 +22,48 @@ epochs.plot()
 # 3. Create evoked data (averages for all the trials):
 Evoked = epochs.average()
 evoked.plot_joint() # plots butterfly plot
+
+
+
+# 2.5. replace TMS pulse artefact with noise based on baseline statistics
+# defining parameters for analysis
+fsample = 5000
+tmin = -0.2  # epochs start at 200 ms before pulse
+tmax = 0.5 #epochs last to 500 ms after pulse
+pulse_start = -0.002 # seconds before pulse start
+pulse_end = 0.007 #seconds after pulse start
+pulse_datapoints = (pulse_end*fsample)+(np.absolute(pulse_start*fsample)) #number of datapoints included in pulse
+pulse_start_datapoint = (np.abs(tmin)*fsample)-(np.abs(pulse_start)*fsample) # datapoint at which pulse begins
+pulse_end_datapoint = (np.abs(pulse_end)*fsample)+(np.abs(tmin)*fsample) #datapoint which pulse ends
+
+
+events = mne.events_from_annotations(data) #Generate an event file for pulses and annotations:
+
+#Epoch data using function (setting index 0 for events selects a list in the array obj. events):
+epochs = mne.Epochs(data, events[0], tmin=tmin, tmax=tmax, preload=True)
+#epochs.plot()
+
+raw_epochs=epochs.get_data() # generates a datafile of the epochs
+raw_baseline = raw_epochs[:,:,0:int(pulse_start_datapoint)] # defines the baseline from raw EEG data from before pulse
+mean_baseline = np.mean(raw_baseline,axis=2) # Here we take the mean of the datapoints
+std_baseline = np.std(raw_baseline,axis=2) #we get std
+
+
+new_pulse = [] # we generate data to write over EEG during pulse
+for i in range(0,int(pulse_datapoints)): # is defined after number of datapoints we want to do it for. that means number of datpapoints in our pulse
+    randomsample = np.random.normal(loc=mean_baseline, scale=std_baseline) #generate random datapoints with mean and std.
+    new_pulse.append(list(randomsample)) #creates a list of datapoints for all 300*64 time periods during pulse
+
+new_pulse = np.array(new_pulse) #generate array
+new_pulse = np.transpose(new_pulse, axes=(1,2,0)) #change order of array
+
+raw_epochs_interpolated = raw_epochs.copy()
+raw_epochs_interpolated[:,:,int(pulse_start_datapoint):int(pulse_end_datapoint)] = new_pulse
+
+newepochs = mne.EpochsArray(raw_epochs_interpolated,info=epochs.info)
+
+
+plt.figure()
+plt.plot(raw_epochs[100,10,:])
+plt.plot(raw_epochs_interpolated[100,10,:])
+plt.show()
