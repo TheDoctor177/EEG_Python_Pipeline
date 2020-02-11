@@ -13,14 +13,6 @@ filename = "ane_SD_EMG_1016_awake_tms.vhdr"
 filepath = Path("E:/Anesthesia/EEG/ane_SD_1016")
 file = filepath / filename
 
-# function for pausing for loop, works only in windows!!!
-# def wait():
-#     end_flag = 0
-#     while not end_flag:
-#         x = m.getch()
-#         if m.getch():
-#             end_flag = 1
-
         
 def plot_response(signal, argument):
     """plot response to check what happened with the data"""
@@ -180,7 +172,7 @@ ica.fit(data, picks=['eeg', 'eog'])
 ica.plot_components(inst=data)  # show all components interactive (slow)
 
 # 8. loop through each channel (faster):
-ica.exclude = detect_bad_ic(ica, data)
+# ica.exclude = detect_bad_ic(ica, data)
 clean_data = data.copy()
 ica.apply(clean_data, exclude=ica.exclude)
 # 9. Replace TMS pulse artefact with noise based on baseline statistics (AGAIN)
