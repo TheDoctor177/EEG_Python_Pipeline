@@ -6,16 +6,15 @@ Created on Tue Feb 11 11:33:18 2020
 """
 
 import mne
-import scipy
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from scipy.integrate import simps
+import pyconscious as pc
 
 
 # define path and filename (here you might want to loop over datasets!)
-filename = "ane_SD_EMG_1016_awake_eo.vhdr"
+filename = "ane_SD_EMG_1016_sed_1.vhdr"
 #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
 filepath = Path("E:/Anesthesia/EEG/ane_SD_1016")
 file = filepath / filename
@@ -113,7 +112,7 @@ data.load_data()
 
 # 1.1. channel info (remove EMG and set type for EOG channels)
 #data.drop_channels('EMG')
-data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog'})
+data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog', 'EMG': 'emg'})
 data.set_montage('standard_1005')
 
 # 3. remove bad channels (or do not remove but track them)
@@ -128,6 +127,10 @@ new_sampling = 1000
 data.resample(new_sampling, npad='auto')
 #plot_response(data, ['time', 'psd'])
 
+# 5. Filter for ICA
+l_cut, h_cut = 1, 80
+data.filter(l_freq=l_cut, h_freq=h_cut)
+# plot_response(data, 'psd')
 
 # 7. PCA + ICA (by default if rank violated)
 n_ic = len(data.ch_names)-len(bad)
@@ -135,6 +138,8 @@ ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), ma
 ica.fit(data, picks=['eeg', 'eog'])
 
 ica.plot_components(inst=data)  # show all components interactive (slow)
+while not plt.waitforbuttonpress():            
+    print('Inspecting components..')
 
 # 8. loop through each channel (faster):
 # ica.exclude = detect_bad_ic(ica, data)
@@ -145,7 +150,7 @@ ica.apply(clean_data, exclude=ica.exclude)
 # 9. Replace TMS pulse artefact with noise based on baseline statistics (AGAIN)
 
 # 10. filter (first high- then low-pass; notch-filter?)
-l_cut, h_cut = 1, 80
+l_cut, h_cut = 1, 45
 clean_data.filter(l_freq=l_cut, h_freq=h_cut)
 # plot_response(data, 'psd')
 
@@ -154,8 +159,10 @@ clean_data.filter(l_freq=l_cut, h_freq=h_cut)
 # 14. re-reference to average
 clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
 
-# 15. Either cut data into equal chunks for first 5 min. (I think Andrés function take those)
-#     Or apply different C. measures functions...
+# 15. Calculate LZC
+fin_data = clean_data.get_data(picks = 'eeg')
+resultLZ = pc.LZc(fin_data)
+
 
 # remove line-noise by notch filter (not always recommended!)
 #data.notch_filter(freqs=np.arange(50, h_cut, 50))
