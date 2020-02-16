@@ -170,6 +170,11 @@ ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), ma
 ica.fit(data, picks=['eeg', 'eog'])
 
 ica.plot_components(inst=data)  # show all components interactive (slow)
+# Wait until any key is pressed in the last opened window!!!!
+# !!!! DO NOT CLOSE WINDOWS MANUALLY!!!
+while not plt.waitforbuttonpress():            
+    print('Inspecting channels..')
+plt.close('all')
 
 # 8. loop through each channel (faster):
 # ica.exclude = detect_bad_ic(ica, data)
