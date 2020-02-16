@@ -138,7 +138,9 @@ ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), ma
 ica.fit(data, picks=['eeg', 'eog'])
 
 ica.plot_components(inst=data)  # show all components interactive (slow)         
-
+while not plt.waitforbuttonpress():            
+    print('Inspecting channels..')
+plt.close('all')
 
 # 8. loop through each channel (faster):
 # ica.exclude = detect_bad_ic(ica, data)
@@ -161,11 +163,13 @@ clean_data.set_eeg_reference('average', projection=False)  # you might want to g
 # 15. Calculate LZC
 fiveMin = 300 * 1000 # 5 minutes in sample points
 fin_data = clean_data.get_data(picks = 'eeg', stop = fiveMin)
-resultLZsed = pc.LZc(fin_data)
+resultLZ = pc.LZc(fin_data)
 
 # The following need 3D arrays to function...
-resultSCE = pc.SCE(fin_data)
-resultACE = pc.ACE(fin_data)
+# resultSCE = pc.SCE(fin_data)
+# resultACE = pc.ACE(fin_data)
+
+
 
 # remove line-noise by notch filter (not always recommended!)
 #data.notch_filter(freqs=np.arange(50, h_cut, 50))
