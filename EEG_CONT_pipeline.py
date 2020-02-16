@@ -14,9 +14,9 @@ import pyconscious as pc
 
 
 # define path and filename (here you might want to loop over datasets!)
-filename = "ane_SD_EMG_1016_sed_1.vhdr"
+filename = "ane_SD_EMG_1010_sed_1.vhdr"
 #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
-filepath = Path("E:/Anesthesia/EEG/ane_SD_1016")
+filepath = Path("E:/Anesthesia/EEG/ane_SD_1010")
 file = filepath / filename
 
 
@@ -137,9 +137,8 @@ n_ic = len(data.ch_names)-len(bad)
 ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), max_pca_components=n_ic)
 ica.fit(data, picks=['eeg', 'eog'])
 
-ica.plot_components(inst=data)  # show all components interactive (slow)
-while not plt.waitforbuttonpress():            
-    print('Inspecting components..')
+ica.plot_components(inst=data)  # show all components interactive (slow)         
+
 
 # 8. loop through each channel (faster):
 # ica.exclude = detect_bad_ic(ica, data)
@@ -147,7 +146,7 @@ while not plt.waitforbuttonpress():
 # Clean data from bad ICs
 clean_data = data.copy()
 ica.apply(clean_data, exclude=ica.exclude)
-# 9. Replace TMS pulse artefact with noise based on baseline statistics (AGAIN)
+
 
 # 10. filter (first high- then low-pass; notch-filter?)
 l_cut, h_cut = 1, 45
@@ -160,9 +159,13 @@ clean_data.filter(l_freq=l_cut, h_freq=h_cut)
 clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
 
 # 15. Calculate LZC
-fin_data = clean_data.get_data(picks = 'eeg')
-resultLZ = pc.LZc(fin_data)
+fiveMin = 300 * 1000 # 5 minutes in sample points
+fin_data = clean_data.get_data(picks = 'eeg', stop = fiveMin)
+resultLZsed = pc.LZc(fin_data)
 
+# The following need 3D arrays to function...
+resultSCE = pc.SCE(fin_data)
+resultACE = pc.ACE(fin_data)
 
 # remove line-noise by notch filter (not always recommended!)
 #data.notch_filter(freqs=np.arange(50, h_cut, 50))
