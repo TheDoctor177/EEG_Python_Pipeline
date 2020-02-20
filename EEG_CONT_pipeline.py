@@ -102,7 +102,21 @@ def detect_bad_ic(ica_data, data_orig):
     #[bad_list.append(ica_data.ch_names.index(ci)) for ci in bad_ic]
     return bad_ic
 
-
+def epoch(data, sfreq=1000, tepoch=5, time=5, tmin=-2.5, tmax=2.5):
+    # Set parameters
+    time = time * 60 # time in sec
+    nepochs = int((time / tepoch)) # Number of epochs
+    sp = sfreq * tepoch # Samples per epoch = frequency times 5 sec.
+    fiveMin =  time * sfreq # 5 minutes in sample points
+    points = np.arange(0, fiveMin, sp).reshape(nepochs,1) # Indecies for event points
+    dummy = np.ones((nepochs, 1), dtype=int)
+    
+    # Make event structure
+    events = np.concatenate((points,dummy,dummy), 1)
+    # Epoch data
+    epoched_Data = mne.Epochs(data, events, tmin=tmin, tmax=tmax, baseline=None)
+    
+    return epoched_Data
 
 
 # 1. load data (vhdr file)
@@ -160,10 +174,12 @@ clean_data.filter(l_freq=l_cut, h_freq=h_cut)
 # 14. re-reference to average
 clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
 
+# 14.5 Epoch for complexity measures
+eData = epoch(clean_data)
+
 # 15. Calculate LZC
-fiveMin = 300 * 1000 # 5 minutes in sample points
-fin_data = clean_data.get_data(picks = 'eeg', stop = fiveMin)
-resultLZ = pc.LZc(fin_data)
+eData = eData.get_data(picks = 'eeg')
+resultLZ = pc.LZc(eData)
 
 # The following need 3D arrays to function...
 # resultSCE = pc.SCE(fin_data)
