@@ -11,15 +11,20 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import pyconscious as pc
+import os
 
 
 # define path and filename (here you might want to loop over datasets!)
-filename = "ane_SD_EMG_1010_sed_1.vhdr"
+name = "ane_SD_EMG_1010_sed_1"
+ending = ".vhdr"
+filename = name + ending
 #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
+outpath = "E:/Anesthesia/EEG_preProcessed/ane_SD_1016/"
 filepath = Path("E:/Anesthesia/EEG/ane_SD_1010")
 file = filepath / filename
 
-
+os.mkdir(outpath)
+print('Path created')
         
 def plot_response(signal, argument):
     """plot response to check what happened with the data"""
@@ -37,7 +42,7 @@ def detect_bad_ch(eeg):
     """plots each channel so user can decide whether good (mouse click) or bad (enter / space)"""
     good_ch, bad_ch = [], []
     intvl = eeg.__len__() // 20
-    if type(eeg) is mne.epochs.EpochsArray:
+    if type(eeg) is mne.epochs.EpochsArray or mne.epochs.Epochs:
         # Benny's way is way too slow.... and a bit ugly...         
         # Let's try it MNE style
         n_chan = eeg.ch_names.__len__()
@@ -114,7 +119,7 @@ def epoch(data, sfreq=1000, tepoch=5, time=5, tmin=-2.5, tmax=2.5):
     # Make event structure
     events = np.concatenate((points,dummy,dummy), 1)
     # Epoch data
-    epoched_Data = mne.Epochs(data, events, tmin=tmin, tmax=tmax, baseline=None)
+    epoched_Data = mne.Epochs(data, events, tmin=tmin, tmax=tmax, baseline=None, preload=True)
     
     return epoched_Data
 
@@ -176,14 +181,21 @@ clean_data.set_eeg_reference('average', projection=False)  # you might want to g
 
 # 14.5 Epoch for complexity measures
 eData = epoch(clean_data)
+eData.drop_bad()
+# Detect and reject bad epochs
+eData.plot(n_epochs=2, n_channels=16)
+eData.drop_bad()
+
+# Save epoched data
+eData.save((outpath + name + '_epo.fif'))
 
 # 15. Calculate LZC
 eData = eData.get_data(picks = 'eeg')
 resultLZ = pc.LZc(eData)
 
 # The following need 3D arrays to function...
-# resultSCE = pc.SCE(fin_data)
-# resultACE = pc.ACE(fin_data)
+resultSCE = pc.SCE(eData)
+resultACE = pc.ACE(eData)
 
 
 
