@@ -6,12 +6,12 @@ import numpy as np
 from pathlib import Path
 from scipy.integrate import simps
 import os
-os.chdir("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG_Analysis/ane_SD_1016_analysis")
+os.chdir("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG_Analysis")
 from pci_st import *
 
 
 # define path and filename (here you might want to loop over datasets!)
-filename = "ane_SD_EMG_1016_awake_tms.vhdr"
+filename = "ane_SD_EMG_1016_sed_tms_2.vhdr"
 filepath = Path("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG/ane_SD_1016")
 #filepath = Path("E:/Anesthesia/EEG/ane_SD_1016")
 file = filepath / filename
