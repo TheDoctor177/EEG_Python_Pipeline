@@ -155,6 +155,7 @@ data = TMS_interpolate(data) # look at function to change
 #good, bad = detect_bad_ch(data)
 data = detect_bad_ch(data)
 bad = data.info['bads']  # keep track of bad channels but do not remove (MNE style)
+data.bad_chan = bad # Save bad channels to to keep track
 #data.drop_channels(bad)  # remove bad channels (eeglab style)
 data = data.interpolate_bads(reset_bads=True)  # for presentation of bad channels change to False
 
@@ -171,7 +172,7 @@ ica.fit(data, picks=['eeg', 'eog'])
 
 ica.plot_components(inst=data)  # show all components interactive (slow)
 # Wait until any key is pressed in the last opened window!!!!
-# !!!! DO NOT CLOSE WINDOWS MANUALLY!!!
+# !!!! DO NOT CLOSE WINDOWS MANUALLY !!!
 while not plt.waitforbuttonpress():            
     print('Inspecting channels..')
 plt.close('all')

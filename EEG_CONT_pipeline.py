@@ -123,11 +123,12 @@ l_cut, h_cut = 1, 45
 for sub in sName:
     for cond in conditions:
         # 0.1 Decide which participant and which condition
-        filename = sub + cond + ending
+        filename = sub + cond
+        fullfilename = sub + cond + ending
         #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
         outpath = "E:/Anesthesia/EEG_preProcessed/" + sub + "/"
         filepath = Path(("E:/Anesthesia/EEG/" + sub))
-        file = filepath / filename
+        file = filepath / fullfilename
         try: 
             os.mkdir(outpath)
             print('Path created')
@@ -154,6 +155,8 @@ for sub in sName:
         #good, bad = detect_bad_ch(data)
         good, bad = detect_bad_ch(data)
         data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
+        data.bad_chan = bad
+        data.n_bad_chan = len(bad)
         #data.drop_channels(bad)  # remove bad channels (eeglab style)
         data = data.interpolate_bads(reset_bads=True)  # for presentation of bad channels change to False
         
