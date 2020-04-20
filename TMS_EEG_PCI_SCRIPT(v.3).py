@@ -6,14 +6,15 @@ import numpy as np
 from pathlib import Path
 from scipy.integrate import simps
 import os
-os.chdir("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG_Analysis")
-from pci_st import *
+# os.chdir("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG_Analysis")
+# from pci_st import *
 
 
 # define path and filename (here you might want to loop over datasets!)
 filename = "ane_SD_EMG_1016_awake_tms.vhdr"
-filepath = Path("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG/ane_SD_1016")
-#filepath = Path("E:/Anesthesia/EEG/ane_SD_1016")
+FileNoEnding = "ane_SD_EMG_1016_awake_tms" # Used for saving
+# filepath = Path("//lagringshotell/imb-jstormlab/Data/Anesthesia_Project/EEG/ane_SD_1016")
+filepath = Path("E:/Anesthesia/EEG/ane_SD_EMG_1016")
 file = filepath / filename
 
         
@@ -134,9 +135,10 @@ data = data.interpolate_bads(reset_bads=True)  # for presentation of bad channel
 
 # 7. Epoching data (important before ICA)
 #Epoch data using function (setting index 0 for events selects a list in the array obj. events):
-data = mne.Epochs(data, events[0], tmin=-1, tmax=2, preload=True, baseline=None) # No baseline applied
+events = mne.events_from_annotations(data) #Generate an event file for pulses and annotations:
+data = mne.Epochs(data, events[0], event_id=events[1]['Response/R128'], tmin=-1, tmax=2, preload=True, baseline=None) # No baseline applied
 
-
+    
 # 8. PCA + ICA (by default if rank violated)
 n_ic = len(data.ch_names)-len(bad)
 ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), max_pca_components=n_ic)
@@ -154,17 +156,28 @@ plt.close('all')
 clean_data = data.copy()
 ica.apply(clean_data, exclude=ica.exclude)
 
-# 10. Apply baseline correction
+# 10. Epoch into shorter epochs and apply baseline correction (in accordance with paper) 
+clean_data.crop(tmin=-0.4, tmax=0.4)
 clean_data.apply_baseline(None,0)
 
-# 11. Bandpassfilter again
-l_cut, h_cut = 0.5, 45
-data.filter(l_freq=l_cut, h_freq=h_cut)
+# 11. Lowpass filter again
+h_cut = 45
+data.filter(l_freq=None, h_freq=h_cut)
 
 # 10. Run ICA again to remove any remaining artifacts?
 
 # 11. re-reference to average
 clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
+
+# Inspect epochs and drop bad ones
+clean_data.plot(n_epochs=5, n_channels=16)
+while not plt.waitforbuttonpress():            
+    print('Inspecting channels..')
+plt.close('all')
+clean_data.drop_bad()
+
+# 11.1 Save epoched data
+clean_data.save((outpath + FileNoEnding + '_epo.fif'))
 
 # 12. create evoked data (average over all trials)/ Butterfly plot
 evoked_epochs = clean_data.average()
@@ -172,6 +185,6 @@ evoked_epochs.plot_joint() # plots butterfly plot
 
 # 13. Calculate PCI_ST
 # Use same baseline window as above, define response window from evoked response!
-par = {'baseline_window':(-0.2,-0.002), 'response_window':(0.007,50), 'k':1.2, 'min_snr':1.1, 'max_var':99, 'embed':False,'n_steps':100}
+par = {'baseline_window':(-400,-0.002), 'response_window':(0.007,50), 'k':1.2, 'min_snr':1.1, 'max_var':99, 'embed':False,'n_steps':100}
 pci = calc_PCIst(evoked_epochs.data, evoked_epochs.times, **par)
 print(pci)

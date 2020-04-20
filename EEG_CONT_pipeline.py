@@ -151,6 +151,9 @@ for sub in sName:
         #data.drop_channels('EMG')
         data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog', 'EMG': 'emg'})
         data.set_montage('standard_1005')
+        # Drop EMG channel if present (might have forgotten to change workspace during recording)
+        if data.info['ch_names'][-1] == 'EMG'
+            data.drop_channels(data.info['ch_names'][-1])
         
         # 2. resample (with low-pass filter!)
         data.resample(new_sampling, npad='auto')
@@ -165,13 +168,13 @@ for sub in sName:
         
         # 4. remove bad channels (or do not remove but track them)
         #good, bad = detect_bad_ch(data)
-        eeg_data = data.copy().pick_types(eeg=True, eog=False, emg=False)
-        good, bad = detect_bad_ch(eeg_data)
-        eeg_data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
+        # eeg_data = data.copy().pick_types(eeg=True, eog=False, emg=False)
+        good, bad = detect_bad_ch(data)
+        data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
         data.bad_chan = bad # Keep track of bad channels in main data
         data.n_bad_chan = len(bad) # Keep track of number of channels
         #data.drop_channels(bad)  # remove bad channels (eeglab style)
-        eeg_data = eeg_data.interpolate_bads(reset_bads=True)  
+        data.interpolate_bads(reset_bads=True)  
         
         # Append interpolated data to data
         # data.drop_channels(data.ch_names[0:62])
@@ -206,18 +209,22 @@ for sub in sName:
         
         # 9 Epoch for complexity measures
         eData = epoch(clean_data)
-        eData.drop_bad()
+        eData.save((outpath + filename + '_epo.fif'))
+
+        # eData.drop_bad()
         # Detect and reject bad epochs
         eData.plot(n_epochs=5, n_channels=16)
         while not plt.waitforbuttonpress():            
             print('Inspecting channels..')
         plt.close('all')
         # eData.plot(n_epochs=5, n_channels=16, block=True)
-        bad = eData.info['bads']
+        
+        # Figure out how to save dropped epochs?
+        # bad = eData.info['bads']
         eData.drop_bad()
         
         # Save epoched data
-        eData.save((outpath + filename + '_epo.fif'))
+        eData.save((outpath + filename + 'clean_epo.fif'))
 
 # # 15. Calculate LZC
 # eData = eData.get_data(picks = 'eeg')
