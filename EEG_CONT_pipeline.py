@@ -63,7 +63,7 @@ def detect_bad_ch(eeg):
             ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=1)
             ax2 = plt.subplot2grid((3, 3), (0, 1), colspan=2, rowspan=3)
             ax1.psd(time_data, 5000, 5000)
-            ax1.set_xlim([0, 55])
+            ax1.set_xlim([0, 80])
             ax2.plot(df, 'b')
             plt.show()
 
@@ -113,7 +113,8 @@ def epoch(data, sfreq=1000, tepoch=5, time=5, tmin=-2.5, tmax=2.5):
     return epoched_Data
 
 # define path and filename (here you might want to loop over datasets!)
-sName = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036"}
+# sName = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036"}
+sName = {"ane_SD_EMG_1010"}
 conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_3_rest"}
 ending = ".vhdr"
 # Settings
@@ -151,51 +152,59 @@ for sub in sName:
         data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog', 'EMG': 'emg'})
         data.set_montage('standard_1005')
         
-        # 3. remove bad channels (or do not remove but track them)
-        #good, bad = detect_bad_ch(data)
-        good, bad = detect_bad_ch(data)
-        data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
-        data.bad_chan = bad
-        data.n_bad_chan = len(bad)
-        #data.drop_channels(bad)  # remove bad channels (eeglab style)
-        data = data.interpolate_bads(reset_bads=True)  # for presentation of bad channels change to False
-        
-        # 4. resample (with low-pass filter!)
+        # 2. resample (with low-pass filter!)
         data.resample(new_sampling, npad='auto')
         #plot_response(data, ['time', 'psd'])
         
-        # 5. Filter for ICA; also notch cause it fucks up ICA....
-        data.filter(l_freq=1, h_freq=80)
-        data.filter(freqs=50)
+        # 3. Filter for ICA; also notch cause it fucks up ICA....
+        data.filter(l_freq=1, h_freq=80, picks=['eeg', 'eog'])
+        data.notch_filter(freqs=(np.arange(50,80,50)), picks=['eeg', 'eog'])
+        # remove line-noise by sinusoidal fit (takes longer but worth it!)
+        # data.notch_filter(freqs=[50], method='spectrum_fit', p_value=1)
         # plot_response(data, 'psd')
         
-        # 7. PCA + ICA (by default if rank violated)
+        # 4. remove bad channels (or do not remove but track them)
+        #good, bad = detect_bad_ch(data)
+        eeg_data = data.copy().pick_types(eeg=True, eog=False, emg=False)
+        good, bad = detect_bad_ch(eeg_data)
+        eeg_data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
+        data.bad_chan = bad # Keep track of bad channels in main data
+        data.n_bad_chan = len(bad) # Keep track of number of channels
+        #data.drop_channels(bad)  # remove bad channels (eeglab style)
+        eeg_data = eeg_data.interpolate_bads(reset_bads=True)  
+        
+        # Append interpolated data to data
+        # data.drop_channels(data.ch_names[0:62])
+
+        
+        # 5. PCA + ICA (by default if rank violated)
         n_ic = len(data.ch_names)-len(bad)
-        ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), max_pca_components=n_ic)
+        if not bad:
+            ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True))
+        else:
+            ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), max_pca_components=n_ic)
         ica.fit(data, picks=['eeg', 'eog'])
         
         ica.plot_components(inst=data)  # show all components interactive (slow)         
         while not plt.waitforbuttonpress():            
-            print('Inspecting channels..')
+            print('Inspecting components..')
         plt.close('all')
         
-        # 8. loop through each channel (faster):
+        # 6. loop through each channel (faster):
         # ica.exclude = detect_bad_ic(ica, data)
         
         # Clean data from bad ICs
         clean_data = data.copy()
         ica.apply(clean_data, exclude=ica.exclude)     
         
-        # 10. filter (first high- then low-pass; notch-filter?)
-        clean_data.filter(l_freq=l_cut, h_freq=h_cut)
+        # 7. filter again at 45
+        # clean_data.filter(l_freq=None, h_freq=h_cut)
         # plot_response(data, 'psd')
         
-        # 12. Run ICA again to remove any remaining artifacts.
-        
-        # 14. re-reference to average
+        # 8. re-reference to average
         clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
         
-        # 14.5 Epoch for complexity measures
+        # 9 Epoch for complexity measures
         eData = epoch(clean_data)
         eData.drop_bad()
         # Detect and reject bad epochs
@@ -203,7 +212,8 @@ for sub in sName:
         while not plt.waitforbuttonpress():            
             print('Inspecting channels..')
         plt.close('all')
-        
+        # eData.plot(n_epochs=5, n_channels=16, block=True)
+        bad = eData.info['bads']
         eData.drop_bad()
         
         # Save epoched data
