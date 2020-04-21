@@ -152,7 +152,7 @@ for sub in sName:
         data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog', 'EMG': 'emg'})
         data.set_montage('standard_1005')
         # Drop EMG channel if present (might have forgotten to change workspace during recording)
-        if data.info['ch_names'][-1] == 'EMG'
+        if data.info['ch_names'][-1] == 'EMG':
             data.drop_channels(data.info['ch_names'][-1])
         
         # 2. resample (with low-pass filter!)
