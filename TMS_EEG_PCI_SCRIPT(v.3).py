@@ -177,7 +177,7 @@ plt.close('all')
 clean_data.drop_bad()
 
 # 11.1 Save epoched data
-clean_data.save((outpath + FileNoEnding + '_epo.fif'))
+clean_data.save((FileNoEnding + '_epochs' + '_epo.fif'), split_size='2GB')
 
 # 12. create evoked data (average over all trials)/ Butterfly plot
 evoked_epochs = clean_data.average()
