@@ -114,125 +114,141 @@ def epoch(data, sfreq=1000, tepoch=5, time=5, tmin=-2.5, tmax=2.5):
 
 # define path and filename (here you might want to loop over datasets!)
 # sName = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036"}
-sName = {"ane_SD_EMG_1010"}
-conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_3_rest"}
+sName = "ane_SD_EMG_1022"
+if sName == "ane_SD_EMG_1010":
+    conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1", "_SED_2", "_SED_3"}
+elif sName == "ane_SD_EMG_1016":
+    conditions = {"_awake_rest_ec", "_awake_rest_eo", "_sed_1", "_sed_2", "_sed_3"}
+else:
+    conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_2_rest"}
+
 ending = ".vhdr"
 # Settings
 new_sampling = 1000
 l_cut, h_cut = 1, 45
 
-for sub in sName:
-    for cond in conditions:
-        # 0.1 Decide which participant and which condition
-        filename = sub + cond
-        fullfilename = sub + cond + ending
-        #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
-        outpath = "E:/Anesthesia/EEG_preProcessed/" + sub + "/"
-        filepath = Path(("E:/Anesthesia/EEG/" + sub))
-        file = filepath / fullfilename
-        try: 
-            os.mkdir(outpath)
-            print('Path created')
-        except:
-            print("Path exists")
-        
-        # 1. load data (vhdr file)
-        try:
-            data = mne.io.read_raw_brainvision(file)
-            data.load_data()
-        except:
-            print("**********************************************************")
-            print("File %s does not exist" % file)
-            print("**********************************************************")
-            continue
-        # plot_response(data, 'time')
-        
-        # 1.1. channel info (remove EMG and set type for EOG channels)
-        #data.drop_channels('EMG')
-        data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog', 'EMG': 'emg'})
-        data.set_montage('standard_1005')
-        # Drop EMG channel if present (might have forgotten to change workspace during recording)
-        if data.info['ch_names'][-1] == 'EMG':
-            data.drop_channels(data.info['ch_names'][-1])
-        
-        # 2. resample (with low-pass filter!)
-        data.resample(new_sampling, npad='auto')
-        #plot_response(data, ['time', 'psd'])
-        
-        # 3. Filter for ICA; also notch cause it fucks up ICA....
-        data.filter(l_freq=1, h_freq=80, picks=['eeg', 'eog'])
-        data.notch_filter(freqs=(np.arange(50,80,50)), picks=['eeg', 'eog'])
-        # remove line-noise by sinusoidal fit (takes longer but worth it!)
-        # data.notch_filter(freqs=[50], method='spectrum_fit', p_value=1)
-        # plot_response(data, 'psd')
-        
-        # 4. remove bad channels (or do not remove but track them)
-        #good, bad = detect_bad_ch(data)
-        # eeg_data = data.copy().pick_types(eeg=True, eog=False, emg=False)
-        good, bad = detect_bad_ch(data)
-        data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
-        data.bad_chan = bad # Keep track of bad channels in main data
-        data.n_bad_chan = len(bad) # Keep track of number of channels
-        #data.drop_channels(bad)  # remove bad channels (eeglab style)
-        data.interpolate_bads(reset_bads=True)  
-        
-        # Append interpolated data to data
-        # data.drop_channels(data.ch_names[0:62])
+# for sub in sName:
+for cond in conditions:
+    # 0.1 Decide which participant and which condition
+    filename = sName + cond
+    fullfilename = sName + cond + ending
+    #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
+    outpath = "E:/Anesthesia/EEG_preProcessed/" + sName + "/"
+    filepath = Path(("E:/Anesthesia/EEG/" + sName))
+    file = filepath / fullfilename
+    try: 
+        os.mkdir(outpath)
+        print('Path created')
+    except:
+        print("Path exists")
+    
+    # 1. load data (vhdr file)
+    try:
+        data = mne.io.read_raw_brainvision(file)
+        data.load_data()
+    except:
+        print("**********************************************************")
+        print("File %s does not exist" % file)
+        print("**********************************************************")
+        continue
+    # plot_response(data, 'time')
+    
+    # 1.1. channel info (remove EMG and set type for EOG channels)
+    #data.drop_channels('EMG')
+    data.set_channel_types({'VEOG': 'eog', 'HEOG': 'eog', 'EMG': 'emg'})
+    data.set_montage('standard_1005')
+    # Drop EMG channel if present (might have forgotten to change workspace during recording)
+    if data.info['ch_names'][-1] == 'EMG':
+        data.drop_channels(data.info['ch_names'][-1])
+    
+    # 2. resample (with low-pass filter!)
+    data.resample(new_sampling, npad='auto')
+    #plot_response(data, ['time', 'psd'])
+    
+    # High-pass filter
+    data.filter(l_freq=1, h_freq=None, picks=['eeg', 'eog'])
+    
+    good, bad = detect_bad_ch(data)
+    data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
+    data.bad_chan = bad # Keep track of bad channels in main data
+    data.n_bad_chan = len(bad) # Keep track of number of channels
+    #data.drop_channels(bad)  # remove bad channels (eeglab style)
+    data.interpolate_bads(reset_bads=True) 
+    
+    # 3. Filter for ICA; also notch cause it fucks up ICA....
+    data.filter(l_freq=None, h_freq=80, picks=['eeg', 'eog'])
+    data.notch_filter(freqs=(np.arange(50,80,50)), picks=['eeg', 'eog'])
+    # remove line-noise by sinusoidal fit (takes longer but worth it!)
+    # data.notch_filter(freqs=[50], method='spectrum_fit', p_value=1)
+    # plot_response(data, 'psd')
+    
+    # 4. remove bad channels (or do not remove but track them)
+    #good, bad = detect_bad_ch(data)
+    # eeg_data = data.copy().pick_types(eeg=True, eog=False, emg=False)
+    # good, bad = detect_bad_ch(data)
+    # data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
+    # data.bad_chan = bad # Keep track of bad channels in main data
+    # data.n_bad_chan = len(bad) # Keep track of number of channels
+    # #data.drop_channels(bad)  # remove bad channels (eeglab style)
+    # data.interpolate_bads(reset_bads=True)  
+    
+    # Append interpolated data to data
+    # data.drop_channels(data.ch_names[0:62])
 
-        
-        # 5. PCA + ICA (by default if rank violated)
-        n_ic = len(data.ch_names)-len(bad)
-        if not bad:
-            ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True))
-        else:
-            ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), max_pca_components=n_ic)
-        ica.fit(data, picks=['eeg', 'eog'])
-        
-        ica.plot_components(inst=data)  # show all components interactive (slow)         
-        while not plt.waitforbuttonpress():            
-            print('Inspecting components..')
-        plt.close('all')
-        
-        # 6. loop through each channel (faster):
-        # ica.exclude = detect_bad_ic(ica, data)
-        
-        # Clean data from bad ICs
-        clean_data = data.copy()
-        ica.apply(clean_data, exclude=ica.exclude)     
-        
-        # 7. filter again at 45
-        # clean_data.filter(l_freq=None, h_freq=h_cut)
-        # plot_response(data, 'psd')
-        
-        # 8. re-reference to average
-        clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
-        
-        # 9 Epoch for complexity measures
-        eData = epoch(clean_data)
-        eData.save((outpath + filename + '_epo.fif'))
+    
+    # 5. PCA + ICA (by default if rank violated)
+    n_ic = len(data.ch_names)-len(bad)
+    if not bad:
+        ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True))
+    else:
+        ica = mne.preprocessing.ICA(method='infomax', fit_params=dict(extended=True), max_pca_components=n_ic)
+    ica.fit(data, picks=['eeg', 'eog'])
+    
+    ica.plot_components(inst=data)  # show all components interactive (slow)         
+    while not plt.waitforbuttonpress():            
+        print('Inspecting components..')
+    plt.close('all')
+    
+    # 6. loop through each channel (faster):
+    # ica.exclude = detect_bad_ic(ica, data)
+    
+    # Clean data from bad ICs
+    clean_data = data.copy()
+    ica.apply(clean_data, exclude=ica.exclude)     
+    
+    # 7. filter again at 45
+    clean_data.filter(l_freq=None, h_freq=h_cut)
+    # plot_response(data, 'psd')
+    
+    # 8. re-reference to average
+    clean_data.set_eeg_reference('average', projection=False)  # you might want to go with True
+    
+    # 9 Epoch for complexity measures
+    eData = epoch(clean_data)
+    eData.save((outpath + filename + '_epo.fif'))
 
-        # eData.drop_bad()
-        # Detect and reject bad epochs
-        eData.plot(n_epochs=5, n_channels=16)
-        while not plt.waitforbuttonpress():            
-            print('Inspecting channels..')
-        plt.close('all')
-        # eData.plot(n_epochs=5, n_channels=16, block=True)
-        
-        # Figure out how to save dropped epochs?
-        # bad = eData.info['bads']
-        eData.drop_bad()
-        
-        # Save epoched data
-        eData.save((outpath + filename + 'clean_epo.fif'))
+    # eData.drop_bad()
+    # Detect and reject bad epochs
+    eData.plot(n_epochs=5, n_channels=16)
+    while not plt.waitforbuttonpress():            
+        print('Inspecting channels..')
+    plt.close('all')
+    # eData.plot(n_epochs=5, n_channels=16, block=True)
+    
+    # Figure out how to save dropped epochs?
+    # bad = eData.info['bads']
+    eData.drop_bad()
+    
+    # Save epoched data
+    eData.save((outpath + filename + '_clean_epo.fif'))
 
 # # 15. Calculate LZC
-# eData = eData.get_data(picks = 'eeg')
-# resultLZ = pc.LZc(eData)
+# finData = eData.get_data(picks = 'eeg')
+# resultLZ = pc.LZc(finData)
 
 # # The following need 3D arrays to function...
-# resultSCE = pc.SCE(eData)
-# resultACE = pc.ACE(eData)
+# resultSCE = pc.SCE(finData)
+# resultACE = pc.ACE(finData)
 
 
 
