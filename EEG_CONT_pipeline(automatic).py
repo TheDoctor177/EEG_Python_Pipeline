@@ -114,10 +114,11 @@ def epoch(data, sfreq=1000, tepoch=5, time=5, tmin=-2.5, tmax=2.5):
     return epoched_Data
 
 # define path and filename (here you might want to loop over datasets!)
-# sID = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036", "ane_SD_EMG_1045", "ane_SD_EMG_1046", "ane_SD_EMG_1054"}
-sID = {"ane_SD_EMG_1045", "ane_SD_EMG_1046", "ane_SD_EMG_1054"}
+# sID = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036"}
+# sID = {"ane_SD_EMG_1045", "ane_SD_EMG_1046", "ane_SD_EMG_1054"}
     # conditions = {"_awake_rest_ec", "_SED_3_rest"}
     # conditions = {"_SED_3_rest"}
+sID = {"ane_SD_EMG_1045"} #, "ane_SD_EMG_1016"}
 ending = ".vhdr"
 # Settings
 new_sampling = 1000
@@ -129,8 +130,8 @@ for sName in sID:
     elif sName == "ane_SD_EMG_1016":
         conditions = {"_awake_rest_ec", "_awake_rest_eo", "_sed_1", "_sed_2", "_sed_3"}
     else:
-        conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_3_rest"}
-
+        # conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_3_rest"}
+        conditions = {"_SED_1_rest_2"}
     
     for cond in conditions:
         # 0.1 Decide which participant and which condition
@@ -230,46 +231,58 @@ for sName in sID:
         eData = epoch(clean_data)
         eData.save((outpath + filename + '_epo.fif'), overwrite=True)
 
-# for sName in sID:
-#     # Conditions
-#     if sName == "ane_SD_EMG_1010":
-#         conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1", "_SED_2", "_SED_3"}
-#     elif sName == "ane_SD_EMG_1016":
-#         conditions = {"_awake_rest_ec", "_awake_rest_eo", "_sed_1", "_sed_2", "_sed_3"}
-#     else:
-#         conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_3_rest"}
+for sName in sID:
+    # Conditions
+    if sName == "ane_SD_EMG_1010":
+        conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1", "_SED_2", "_SED_3"}
+    elif sName == "ane_SD_EMG_1016":
+        conditions = {"_awake_rest_ec", "_awake_rest_eo", "_sed_1", "_sed_2", "_sed_3"}
+    else:
+        # conditions = {"_awake_rest_ec", "_awake_rest_eo", "_SED_1_rest", "_SED_2_rest", "_SED_3_rest"}
+        conditions = {"_SED_1_rest_2"}
 
-#     for cond in conditions:
+    for cond in conditions:
         
-#         # Filepath
-#         filename = sName + cond
-#         fullfilename = sName + cond + ending
-#         #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
-#         outpath = "E:/Anesthesia/EEG_preProcessedAuto/" + sName + "/"
-#         filepath = Path(("E:/Anesthesia/EEG_preProcessedAuto/" + sName))
-#         file = filepath / fullfilename
         
-#         # Load
-#         try:
-#             data = mne.read_epochs(outpath + filename + '_epo.fif')
-#             print("Calculating File %s" % filepath)
-#         except:
-#             print("**********************************************************")
-#             print("File %s does not exist" % filepath)
-#             print("**********************************************************")
-#             continue
+        # Filepath
+        filename = sName + cond
+        fullfilename = sName + cond + ending
+        #filepath = Path("C:/Users/imadjb/Documents/EEG_ANALYSIS/ane_SD_1016")
+        outpath = "E:/Anesthesia/EEG_preProcessedAuto/" + sName + "/"
+        filepath = Path(("E:/Anesthesia/EEG_test/" + sName))
+        file = filepath / fullfilename
         
-#         # To keep track of bad epochs
-#         n_epochs_before = data.get_data().shape[0]
+        if filename == 'ane_SD_EMG_1036_SED_2_rest':
+            continue
+        try: 
+            os.mkdir(outpath)
+            print('Path created')
+        except:
+            print("Path exists")
+            
+        # Load
+        try:
+            data = mne.read_epochs(outpath + filename + '_epo.fif')
+            print("**********************************************************")
+            print("Calculating File %s" % filepath)
+            print("**********************************************************")
+        except:
+            print("**********************************************************")
+            print("File %s does not exist" % filepath)
+            print("**********************************************************")
+            continue
         
-#         # reject automatically
-#         ar = AutoReject(verbose='tqdm')
-#         epochs_clean = ar.fit_transform(data)
+        # To keep track of bad epochs
+        n_epochs_before = data.get_data().shape[0]
         
-#         # number of bad epochs
-#         epochs_clean.info['bad_epochs'] = n_epochs_before - epochs_clean.get_data().shape[0]
+        # reject automatically
+        ar = AutoReject(verbose='tqdm')
+        epochs_clean = ar.fit_transform(data)
+        
+        # number of bad epochs
+        epochs_clean.bad_epochs = n_epochs_before - epochs_clean.get_data().shape[0]
     
-#         # Save epoched data
-#         epochs_clean.save((outpath + filename + '_clean_epo.fif'), overwrite=True)
+        # Save epoched data
+        epochs_clean.save((outpath + filename + '_clean_epo.fif'), overwrite=True)
 
 
