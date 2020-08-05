@@ -97,7 +97,7 @@ def detect_bad_ic(ica_data, data_orig):
 
 # define path and filename (here you might want to loop over datasets!)
 # sName = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036"}
-sName = "ane_SD_EMG_1045"
+sName = "ane_SD_EMG_1054"
 if sName == "ane_SD_EMG_1016":
     conditions = {"_awake_tms", "_sed_tms_1", "_sed_tms_2", "_sed_tms_3"}
 else:
@@ -144,28 +144,40 @@ for cond in conditions:
     data.resample(new_sampling, npad='auto')
     #plot_response(data, ['time', 'psd'])
     
+    # Make butterworth filter
+    iir_params = dict(order=5, ftype='butter')
+    sfreq = 1000
+    filt = mne.filter.construct_iir_filter(iir_params, 40,None, sfreq, 'low',
+                                    return_copy=False)
+    
+    
     # 5. filter (first high- then low-pass; notch-filter?)
     l_cut, h_cut = 0.5, 45
     data.filter(l_freq=l_cut, h_freq=None)
-    #data.notch_filter(freqs=50)
+    # data.notch_filter(freqs=50)
     # plot_response(data, 'psd')
     
     
     # 6. remove bad channels (or do not remove but track them)
-    good, bad = detect_bad_ch(data)
-    data.info['bads'] = bad  # keep track of bad channels but do not remove (MNE style)
+    # good, bad = detect_bad_ch(data)
+    bad = ['Iz', 'TP10', 'C3', 'F5', 'F7']
+    data.bads = bad  # keep track of bad channels but do not remove (MNE style)
+    data.n_bad_channels = len(bad)
     #data.drop_channels(bad)  # remove bad channels (eeglab style)
     data = data.interpolate_bads(reset_bads=True)  # for presentation of bad channels change to False
     
     # Low pass filter after bad chan detect cause easier to see bad chan
-    data.filter(l_freq=None, h_freq=h_cut, h_trans_bandwidth=4)
+    data.filter(l_freq=None, h_freq=40, method='iir', iir_params=filt)
     # data.notch_filter(freqs=[50], method='spectrum_fit', p_value=1)
     # data.notch_filter(freqs=np.arange(50, h_cut, 50))
     
     # 7. Epoching data (important before ICA)
     #Epoch data using function (setting index 0 for events selects a list in the array obj. events):
     events = mne.events_from_annotations(data) #Generate an event file for pulses and annotations:
-    data = mne.Epochs(data, events[0], event_id=events[1]['Response/R128'], tmin=-1, tmax=2, preload=True, baseline=None) # No baseline applied
+    reject = dict(eeg=200e-6, # V (EEG channels)
+                  eog=250e-6 # V (EOG channels)
+                  )
+    data = mne.Epochs(data, events[0], event_id=events[1]['Response/R128'], tmin=-1, tmax=2, preload=True, baseline=None, reject=reject) # No baseline applied
     
         
     # 8. PCA + ICA (by default if rank violated)
@@ -180,6 +192,9 @@ for cond in conditions:
         print('Inspecting channels..')
     plt.close('all')
     
+    # Keep track of rejected components
+    data.n_rejected_comps = len(ica.exclude)
+    
     # 9. loop through each channel (faster):
     # ica.exclude = detect_bad_ic(ica, data)
     clean_data = data.copy()
@@ -187,7 +202,7 @@ for cond in conditions:
     
     # 10. Epoch into shorter epochs and apply baseline correction (in accordance with paper) 
     clean_data.crop(tmin=-0.4, tmax=0.4)
-    clean_data.apply_baseline(None,0)
+    clean_data.apply_baseline()
     
     # # 11. Lowpass filter again
     # h_cut = 45

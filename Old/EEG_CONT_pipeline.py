@@ -213,9 +213,9 @@ for cond in conditions:
         print('Inspecting components..')
     plt.close('all')
     
-    # 6. loop through each channel (faster):
-    # ica.exclude = detect_bad_ic(ica, data)
-    
+    # Keep track of rejected components
+    data.info['n_rejected_comps'] = len(ica.exclude)
+
     # Clean data from bad ICs
     clean_data = data.copy()
     ica.apply(clean_data, exclude=ica.exclude)     
@@ -231,18 +231,24 @@ for cond in conditions:
     eData = epoch(clean_data)
     eData.save((outpath + filename + '_epo.fif'), overwrite=True)
 
+    # To keep track of bad epochs
+    n_epochs_before = data.get_data().shape[0]
+
     # eData.drop_bad()
-    # Detect and reject bad epochs
-    eData.plot(n_epochs=5, n_channels=16)
-    while not plt.waitforbuttonpress():            
-        print('Inspecting channels..')
-    plt.close('all')
-    # eData.plot(n_epochs=5, n_channels=16, block=True)
+    # Detect and reject bad epochs manually
+    # eData.plot(n_epochs=5, n_channels=16)
+    # while not plt.waitforbuttonpress():            
+    #     print('Inspecting channels..')
+    # plt.close('all')
+    # eData.drop_bad()
     
-    # Figure out how to save dropped epochs?
-    # bad = eData.info['bads']
-    eData.drop_bad()
+    # reject automatically
+    ar = AutoReject()
+    epochs_clean = ar.fit_transform(data)
     
+    # number of bad epochs
+    epochs_clean.info['bad_epochs'] = n_epochs_before - data.get_data().shape[0]
+
     # Save epoched data
     eData.save((outpath + filename + '_clean_epo.fif'), overwrite=True)
 
