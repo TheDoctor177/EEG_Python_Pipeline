@@ -13,14 +13,14 @@ from pathlib import Path
 import os
 from pci_st import *
 from scipy.integrate import simps
-from autoreject import AutoReject
+
 
 # define path and filename (here you might want to loop over datasets!)
-sName = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036", "ane_SD_EMG_1045", "ane_SD_EMG_1046", "ane_SD_EMG_1054"}
-# sName = {"ane_SD_EMG_1054"}
+# sName = {"ane_SD_EMG_1010", "ane_SD_EMG_1016", "ane_SD_EMG_1017", "ane_SD_EMG_1022", "ane_SD_EMG_1024", "ane_SD_EMG_1033", "ane_SD_EMG_1036", "ane_SD_EMG_1045", "ane_SD_EMG_1046", "ane_SD_EMG_1054"}
+sName = {"ane_SD_EMG_1016"}
 
 conditions = {"awake_tms", "SED_1_TMS", "SED_2_TMS", "SED_3_TMS"}
-# conditions = {"_awake_rest_ec", "_SED_3_rest"}
+# conditions = {"awake_tms", "SED_1_TMS"}
 # conditions = {"_SED_3_rest"}
 ending = "_clean_epo.fif"
 
@@ -62,11 +62,12 @@ for sub in sName:
             print("File %s does not exist" % filepath)
             print("**********************************************************")
             continue
-        
+        # data.crop(tmin=-0.2, tmax=0.4)
         # 12. create evoked data (average over all trials)/ Butterfly plot
         evoked_epochs = data.average(picks='eeg')
+
         if plot:
-            evoked_epochs.plot_joint(title=filename) # plots butterfly plot
+            evoked_epochs.plot(window_title = filename) # plots butterfly plot
             while not plt.waitforbuttonpress():            
                 print('Inspecting Butterfly..')
             plt.close('all')
@@ -75,6 +76,6 @@ for sub in sName:
         # Might be nice to directly put into a table...
         # Use same baseline window as above, define response window from evoked response!
         par = {'baseline_window':(-400,-0.007), 'response_window':(0.007,300), 'k':1.2, 'min_snr':1.1, 'max_var':99, 'embed':False,'n_steps':100}
-        pci = calc_PCIst(evoked_epochs.data, evoked_epochs.times, **par)
+        # pci = calc_PCIst(evoked_epochs.data, evoked_epochs.times, **par)
         
-        PCI_st.loc[[sub],[cond]] = pci
+        # PCI_st.loc[[sub],[cond]] = pci
